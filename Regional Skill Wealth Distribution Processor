@@ -1,0 +1,104 @@
+# Load necessary libraries
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(openxlsx)
+
+# Define year mapping and row positions for each region
+year_mapping <- c("Region", "2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021", "2022")
+region_rows <- list("NW" = 2, "NE" = 4, "Toscana" = 6, "Centro" = 5, "Sud" = 3, "Ext" = 7)
+regions <- names(region_rows)
+
+# Function to load data for each year range, for each region
+load_data_from_specific_row <- function(file_path, start_row, region_name) {
+  # Load data starting from the specified row without headers
+  data <- read_excel(file_path, skip = start_row - 1, col_names = FALSE)
+  colnames(data) <- year_mapping  # Rename columns based on year mapping
+  
+  # Filter the specific row for the region and reshape to long format
+  region_data <- data %>%
+    filter(Region == region_name) %>%
+    pivot_longer(cols = `2014`:`2022`, names_to = "Year", values_to = "Total_Wealth") %>%
+    mutate(Region = region_name, Year = as.numeric(Year), Total_Wealth = as.numeric(Total_Wealth)) %>%
+    mutate(
+      low = Total_Wealth * 0.30,       # Low-skill distribution
+      middle = Total_Wealth * 0.40,    # Middle-skill distribution
+      high = Total_Wealth * 0.299,     # High-skill distribution
+      capitalist = Total_Wealth * 0.001 # Capitalist distribution
+    ) %>%
+    select(Region, Year, low, middle, high, capitalist)
+  
+  return(region_data)
+}
+
+# Prompt to select the file for skills by region
+cat("Please select the 'Skill by region (2014-2023)' file:\n")
+file_path <- file.choose()
+
+# Create an empty list to store results for each region
+all_data <- list()
+
+# Process each region and load the data
+for (region in regions) {
+  start_row <- region_rows[[region]]
+  region_data <- load_data_from_specific_row(file_path, start_row, region)
+  all_data[[region]] <- region_data
+}
+
+# Combine all regional data into one dataframe
+combined_data <- bind_rows(all_data)
+
+# Save the combined data to an Excel file
+output_path <- "Combined_Skills_by_Region_2014_2022.xlsx"
+wb <- createWorkbook()
+addWorksheet(wb, "Skills_Data")
+writeData(wb, "Skills_Data", combined_data)
+saveWorkbook(wb, output_path, overwrite = TRUE)
+cat("Combined skills data file created:", output_path, "\n")
+
+# Function to load and process data for 2011 with adjustments for 2010, 2012, and 2013
+load_2011_data <- function(file_path) {
+  # Load data without specifying column names or rows to skip
+  raw_data <- read_excel(file_path, col_names = FALSE)
+  
+  # Filter rows matching region names, assuming second column contains 2011 data
+  filtered_data <- raw_data %>%
+    filter(...1 %in% regions) %>%
+    select(...1, ...2) %>%
+    rename(Region = ...1, Total_Wealth = ...2) %>%
+    mutate(Year = 2011, Total_Wealth = as.numeric(Total_Wealth))
+  
+  return(filtered_data)
+}
+
+# Prompt to select the file for skills by region from 1995-2011
+cat("Please select the 'Skills (1995-2011 by region)' file:\n")
+file_path <- file.choose()
+
+# Load and process the 2011 data
+data_2011 <- load_2011_data(file_path)
+print(data_2011)  # Verify Total_Wealth structure
+
+# Use a national proxy for 2010, and interpolate for 2012 and 2013
+national_2010_value <- 10000  # Replace with actual national proxy if known
+data_2010 <- data_2011 %>% mutate(Year = 2010, Total_Wealth = national_2010_value)
+data_2012 <- data_2011 %>% mutate(Year = 2012, Total_Wealth = Total_Wealth * 0.95)
+data_2013 <- data_2011 %>% mutate(Year = 2013, Total_Wealth = Total_Wealth * 0.98)
+
+# Combine data for 2010, 2011, 2012, and 2013 and apply skill distribution
+combined_data_2010_2013 <- bind_rows(data_2010, data_2011, data_2012, data_2013) %>%
+  mutate(
+    low = Total_Wealth * 0.30,
+    middle = Total_Wealth * 0.40,
+    high = Total_Wealth * 0.299,
+    capitalist = Total_Wealth * 0.001
+  ) %>%
+  select(Region, Year, low, middle, high, capitalist)
+
+# Save the completed dataset to an Excel file
+output_path <- "Completed_Skills_Data_2010_2013.xlsx"
+wb <- createWorkbook()
+addWorksheet(wb, "Skills_Data_2010_2013")
+writeData(wb, "Skills_Data_2010_2013", combined_data_2010_2013)
+saveWorkbook(wb, output_path, overwrite = TRUE)
+cat("Data file created:", output_path, "\n")
