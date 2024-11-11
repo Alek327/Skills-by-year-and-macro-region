@@ -67,11 +67,9 @@ This project is licensed under the GNU General Public License.
 ## Contact
 
 Project developed by Oleksandr Galychyn.  
-For questions or further information, feel free to connect through LinkedIn or via ORCID.
+For questions or further information, feel free to connect through LinkedIn
 
 - LinkedIn: [Oleksandr Galychyn](https://www.linkedin.com/in/oleksandr-galychyn-05187483/)
-- ORCID: [0000-0002-5875-672X](https://orcid.org/0000-0002-5875-672X)
-
 
 This `README.md` provides a comprehensive overview, usage instructions, code structure, and sample output to help others understand and run your project easily.
 
